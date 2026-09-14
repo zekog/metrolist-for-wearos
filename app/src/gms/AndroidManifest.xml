@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+
+        <!-- Receives the watch sign-in request and asks the user for confirmation. -->
+        <service
+            android:name=".wear.PhoneAuthListenerService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data
+                    android:scheme="wear"
+                    android:host="*"
+                    android:pathPrefix="/metrolist/auth/request" />
+            </intent-filter>
+        </service>
+
+        <receiver
+            android:name=".wear.PhoneAuthActionReceiver"
+            android:exported="false" />
+
+        <!-- Remote control of the phone's playback from the paired watch. -->
+        <service
+            android:name=".wear.PhoneRemoteService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data
+                    android:scheme="wear"
+                    android:host="*"
+                    android:pathPrefix="/metrolist/remote/command" />
+                <data
+                    android:scheme="wear"
+                    android:host="*"
+                    android:pathPrefix="/metrolist/remote/request_state" />
+            </intent-filter>
+        </service>
+
+    </application>
+
+</manifest>

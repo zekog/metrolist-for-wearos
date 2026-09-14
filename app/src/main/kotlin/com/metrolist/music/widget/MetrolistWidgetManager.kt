@@ -58,7 +58,7 @@ class MetrolistWidgetManager @Inject constructor(
         duration: Long = 0,
         currentPosition: Long = 0
     ) {
-        val appWidgetManager = AppWidgetManager.getInstance(context)
+        val appWidgetManager = AppWidgetManager.getInstance(context) ?: return
 
         // Use cached album art if URI hasn't changed, otherwise load new one
         val albumArt: Bitmap?

@@ -80,7 +80,11 @@ class PlaylistWidgetManager @Inject constructor(
     )
 
     init {
-        observeQuickPickChanges()
+        // AppWidgetManager is unavailable on devices without a widget host (e.g. Wear OS),
+        // where getInstance() returns null and touching it would crash the app.
+        if (AppWidgetManager.getInstance(context) != null) {
+            observeQuickPickChanges()
+        }
     }
 
     suspend fun updateIdleWidgets() {
@@ -99,7 +103,7 @@ class PlaylistWidgetManager @Inject constructor(
         appWidgetId: Int,
         options: Bundle,
     ) {
-        val appWidgetManager = AppWidgetManager.getInstance(context)
+        val appWidgetManager = AppWidgetManager.getInstance(context) ?: return
         val state = lastWidgetState
         val albumArt = getCachedAlbumArt(state.artworkUri)
         val quickPicks = buildQuickPicks()
@@ -149,7 +153,7 @@ class PlaylistWidgetManager @Inject constructor(
             currentPosition = currentPosition,
         )
 
-        val appWidgetManager = AppWidgetManager.getInstance(context)
+        val appWidgetManager = AppWidgetManager.getInstance(context) ?: return
         val componentName = ComponentName(context, PlaylistWidgetReceiver::class.java)
         val widgetIds = appWidgetManager.getAppWidgetIds(componentName)
         if (widgetIds.isEmpty()) return

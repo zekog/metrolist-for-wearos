@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.SongItem
+import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.innertube.models.filterExplicit
 import com.metrolist.innertube.models.filterVideoSongs
 import com.metrolist.music.R
@@ -103,6 +104,7 @@ constructor(
                 .add(MediaSessionConstants.CommandToggleShuffle)
                 .add(MediaSessionConstants.CommandToggleRepeatMode)
                 .add(MediaSessionConstants.CommandAddToTargetPlaylist)
+                .add(MediaSessionConstants.CommandPlayRadio)
                 .build(),
             connectionResult.availablePlayerCommands,
         )
@@ -123,6 +125,13 @@ constructor(
 
             MediaSessionConstants.ACTION_TOGGLE_REPEAT_MODE -> session.player.toggleRepeatMode()
             MediaSessionConstants.ACTION_ADD_TO_TARGET_PLAYLIST -> addToTargetPlaylist()
+            MediaSessionConstants.ACTION_PLAY_RADIO -> {
+                val videoId = args.getString(MediaSessionConstants.EXTRA_VIDEO_ID)
+                val playlistId = args.getString(MediaSessionConstants.EXTRA_PLAYLIST_ID)
+                if (!videoId.isNullOrBlank()) {
+                    service.playQueue(YouTubeQueue(WatchEndpoint(videoId = videoId, playlistId = playlistId)))
+                }
+            }
         }
         return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
     }

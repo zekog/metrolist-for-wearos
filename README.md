@@ -26,7 +26,7 @@
 
 <br/>
 
-[**Download**](#download-now) · [**Features**](#features) · [**Translate**](#translations) · [**FAQ**](#faq) · [**Support**](#support-the-project)
+[**Download**](#download-now) · [**Features**](#features) · [**Wear OS**](#wear-os) · [**Translate**](#translations) · [**FAQ**](#faq) · [**Support**](#support-the-project)
 
 </div>
 
@@ -125,6 +125,63 @@
 </table>
 
 </div>
+
+---
+
+<div align="center">
+
+<h1><a id="wear-os"></a>Wear OS</h1>
+
+<h3>Metrolist Wear — a standalone Wear OS app that shares Metrolist's core.</h3>
+
+</div>
+
+The Wear OS app lives in the `:wear` module. It is a separate application that reuses the phone app's core (API, database, playback engine, view models, lyrics providers, downloads) while providing a UI built for round watch screens with crown support.
+
+<div align="center">
+
+<img src="assets/wear/01_home.png" alt="Home" width="19%" />
+<img src="assets/wear/02_search.png" alt="Search" width="19%" />
+<img src="assets/wear/03_player.png" alt="Player" width="19%" />
+<img src="assets/wear/04_queue.png" alt="Queue" width="19%" />
+<img src="assets/wear/05_lyrics.png" alt="Lyrics" width="19%" />
+<img src="assets/wear/06_settings.png" alt="Settings" width="19%" />
+
+</div>
+
+### Build & install
+
+```bash
+# Optimized (R8) build that keeps the ".debug" application id (matches the phone gms build)
+./gradlew :wear:assembleReleaseDebug
+adb install -r wear/build/outputs/apk/releaseDebug/wear-releaseDebug.apk
+
+# Plain debug build
+./gradlew :wear:assembleDebug
+```
+
+APKs are written to `wear/build/outputs/apk/<variant>/`.
+
+### Features
+- **Home** — now playing, quick picks and shortcuts
+- **Search** — voice and keyboard input with YouTube results (songs, albums, artists, playlists)
+- **Library** — songs, albums, artists, playlists and downloads, with detail screens
+- **Player** — full-screen artwork, progress ring, transport controls, like/lyrics/queue
+- **Queue** — with the current item highlighted
+- **Lyrics** — synced highlighting (word-by-word when the provider supplies word timings), tap a line to seek, romanization under the line (kanji → romaji, Cyrillic → Latin, …) and a "back to synced lyrics" button
+- **Stats** — plays, top songs and artists
+- **Settings** — theme (dark / pure black), hide explicit, audio normalization, equalizer, playback target
+- **Crown (rotary)** — scrolls lists and adjusts volume on the player
+
+### Phone ↔ Watch
+Two features connect the watch to the phone app. Both require the **same package name and signing certificate** on both sides, and the phone app built with the **`gms` flavor**:
+
+- **Sign-in handoff** — on the watch: *Settings → Sign in from phone*. The watch asks the paired phone, the phone shows an Allow/Deny notification, and on approval the session is transferred. The watch then works fully standalone (library, likes, downloads).
+- **Remote control** — with *Playback target* set to *Automatic* (default), the watch mirrors and controls the phone's playback (play/pause, next/prev, seek, volume, queue) and can start songs on the phone from watch search. *Control phone* and *Play on watch* force a target; the watch can still play standalone with headphones connected to the watch itself.
+
+### Notes
+- Wear OS ships without WebView, so login uses the phone handoff above instead of an in-app browser.
+- Sign-in handoff and remote control use the Wearable Data Layer and are therefore available in the phone's `gms` flavor only (`foss`/`izzy` stay Google-free).
 
 ---
 

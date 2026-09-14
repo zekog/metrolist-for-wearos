@@ -7,22 +7,6 @@ if (localPropertiesFile.exists()) {
     localProperties.load(localPropertiesFile.inputStream())
 }
 
-val baseApplicationId = "com.metrolist.music"
-val applicationIdOverride = System.getenv("METROLIST_APPLICATION_ID")?.takeIf { it.isNotBlank() }
-val appNameOverride = System.getenv("METROLIST_APP_NAME")?.takeIf { it.isNotBlank() }
-val buildCommit =
-    System.getenv("METROLIST_BUILD_COMMIT")
-        ?.trim()
-        ?.takeIf { it.matches(Regex("[0-9a-fA-F]{7,40}")) }
-        ?.take(7)
-        ?.lowercase()
-val debugKeystorePathOverride = System.getenv("METROLIST_DEBUG_KEYSTORE_PATH")?.takeIf { it.isNotBlank() }
-val debugKeystorePassword = System.getenv("METROLIST_DEBUG_KEYSTORE_PASSWORD")?.takeIf { it.isNotBlank() } ?: "android"
-val debugKeyAlias = System.getenv("METROLIST_DEBUG_KEY_ALIAS")?.takeIf { it.isNotBlank() } ?: "androiddebugkey"
-val debugKeyPassword = System.getenv("METROLIST_DEBUG_KEY_PASSWORD")?.takeIf { it.isNotBlank() } ?: "android"
-val persistentDebugKeystoreFile = file("persistent-debug.keystore")
-val workflowDebugKeystoreFile = debugKeystorePathOverride?.let(::file)
-
 plugins {
     id("com.android.application")
     alias(libs.plugins.hilt)
@@ -37,82 +21,60 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = applicationIdOverride ?: baseApplicationId
-        minSdk = 26
-        targetSdk = 36
-        versionCode = 153
-        versionName = "13.7.0"
-        val baseVersionName = requireNotNull(versionName)
-        buildConfigField("String", "BASE_VERSION_NAME", "\"$baseVersionName\"")
-        buildCommit?.let { versionName = "$baseVersionName+$it" }
-        resValue("string", "app_name", appNameOverride ?: "Metrolist")
+        applicationId = "com.metrolist.music"
+        minSdk = 30
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0.0"
+        resValue("string", "app_name", "Metrolist Wear")
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
 
         ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
         }
 
-        // LastFM API keys from GitHub Secrets
         val lastFmKey = localProperties.getProperty("LASTFM_API_KEY") ?: System.getenv("LASTFM_API_KEY") ?: ""
         val lastFmSecret = localProperties.getProperty("LASTFM_SECRET") ?: System.getenv("LASTFM_SECRET") ?: ""
 
+        buildConfigField("String", "BASE_VERSION_NAME", "\"13.7.0\"")
         buildConfigField("String", "LASTFM_API_KEY", "\"$lastFmKey\"")
         buildConfigField("String", "LASTFM_SECRET", "\"$lastFmSecret\"")
-        buildConfigField("String", "ARCHITECTURE", "\"universal\"")
+        buildConfigField("String", "ARCHITECTURE", "\"wear\"")
         buildConfigField("Long", "DISCORD_APP_ID", "1447278780795064401L")
-    }
-
-    flavorDimensions += listOf("variant")
-    productFlavors {
-        // FOSS - Updater, but no gcast
-        create("foss") {
-            dimension = "variant"
-            isDefault = true
-            buildConfigField("Boolean", "CAST_AVAILABLE", "false")
-            buildConfigField("Boolean", "UPDATER_AVAILABLE", "true")
-        }
-
-        // GMS - Updater and gcast
-        create("gms") {
-            dimension = "variant"
-            buildConfigField("Boolean", "CAST_AVAILABLE", "true")
-            buildConfigField("Boolean", "UPDATER_AVAILABLE", "true")
-        }
-
-        // IzzyOnDroid - no gcast, no updater - the ONLY F-droid compliant build
-        create("izzy") {
-            dimension = "variant"
-            buildConfigField("Boolean", "CAST_AVAILABLE", "false")
-            buildConfigField("Boolean", "UPDATER_AVAILABLE", "false")
-        }
+        buildConfigField("Boolean", "CAST_AVAILABLE", "false")
+        buildConfigField("Boolean", "UPDATER_AVAILABLE", "false")
     }
 
     signingConfigs {
+        // The phone and the watch must be signed with the same certificate for the
+        // Wear OS Data Layer sign-in handoff to work. Reuse the phone app's keys.
         create("persistentDebug") {
-            storeFile = persistentDebugKeystoreFile
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
-        }
-        create("workflowDebug") {
-            storeFile = workflowDebugKeystoreFile ?: persistentDebugKeystoreFile
-            storePassword = debugKeystorePassword
-            keyAlias = debugKeyAlias
-            keyPassword = debugKeyPassword
+            val keystore = rootProject.file("app/persistent-debug.keystore")
+            if (keystore.exists()) {
+                storeFile = keystore
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
         }
         create("release") {
-            storeFile = file("keystore/release.keystore")
-            storePassword = System.getenv("STORE_PASSWORD")
-            keyAlias = System.getenv("KEY_ALIAS")
-            keyPassword = System.getenv("KEY_PASSWORD")
+            val keystore = rootProject.file("app/keystore/release.keystore")
+            if (keystore.exists()) {
+                storeFile = keystore
+                storePassword = System.getenv("STORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
         }
+        // AGP 9 defaults to ~/.config/.android/debug.keystore, while the phone app is signed
+        // with ~/.android/debug.keystore. Force the same key so the Wear Data Layer handoff
+        // (which requires matching package + signature) works between the two.
         getByName("debug") {
+            storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
+            storePassword = "android"
             keyAlias = "androiddebugkey"
             keyPassword = "android"
-            storePassword = "android"
-            storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
         }
     }
 
@@ -122,27 +84,36 @@ android {
             isShrinkResources = true
             isCrunchPngs = false
             isDebuggable = false
+            if (rootProject.file("app/keystore/release.keystore").exists() &&
+                System.getenv("STORE_PASSWORD") != null
+            ) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro",
+                "../app/proguard-rules.pro",
             )
         }
         debug {
-            if (applicationIdOverride == null) {
-                applicationIdSuffix = ".debug"
-            }
+            applicationIdSuffix = ".debug"
             isDebuggable = true
-            if (appNameOverride == null) {
-                resValue("string", "app_name", "Metrolist Debug")
+            if (rootProject.file("app/persistent-debug.keystore").exists()) {
+                signingConfig = signingConfigs.getByName("persistentDebug")
             }
+        }
+        // Optimized (R8) build that keeps the ".debug" application id so it stays a
+        // package/signature match for the phone app's gms debug build. Handy for
+        // sideloading a small, fast watch build without a release keystore.
+        create("releaseDebug") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".debug"
             signingConfig =
-                if (workflowDebugKeystoreFile != null) {
-                    signingConfigs.getByName("workflowDebug")
-                } else if (persistentDebugKeystoreFile.exists()) {
+                if (rootProject.file("app/persistent-debug.keystore").exists()) {
                     signingConfigs.getByName("persistentDebug")
                 } else {
                     signingConfigs.getByName("debug")
                 }
+            matchingFallbacks += listOf("release")
         }
     }
 
@@ -171,13 +142,9 @@ android {
     }
 
     lint {
-        lintConfig = file("lint.xml")
         warningsAsErrors = false
         abortOnError = false
         checkDependencies = false
-        // Lint never gated anything here (abortOnError = false), so the
-        // lintVital pass that assembleRelease implicitly triggers was pure
-        // build time. Run lint on demand with ./gradlew :app:lintGmsRelease.
         checkReleaseBuilds = false
     }
 
@@ -203,6 +170,25 @@ android {
             excludes += "META-INF/io.netty.versions.properties"
         }
     }
+
+    // Reuse the phone app's application + core sources. The Wear UI lives under
+    // wear/src/main/kotlin in the com.metrolist.music.wear package; the shared core
+    // (API, DB, playback, viewmodels, utils) is compiled straight from :app so both
+    // apps stay in lock-step without duplicating ~260 files.
+    sourceSets {
+        getByName("main") {
+            kotlin.srcDirs(
+                "src/main/kotlin",
+                "../app/src/main/kotlin",
+                "../app/src/foss/kotlin",
+            )
+            res.srcDirs(
+                "src/main/res",
+                "../app/src/main/res",
+            )
+            assets.srcDirs("../app/src/main/assets")
+        }
+    }
 }
 
 protobuf {
@@ -219,33 +205,17 @@ protobuf {
     }
 }
 
-val cleanLegacyProtoSources = tasks.register<Delete>("cleanLegacyProtoSources") {
-    delete(layout.projectDirectory.dir("src/main/java/com/metrolist/music/listentogether/proto"))
-}
-
-tasks.named("preBuild") {
-    dependsOn(cleanLegacyProtoSources)
-}
-
 ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
+    arg("room.schemaLocation", "$rootDir/app/schemas")
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
     compilerOptions {
-        freeCompilerArgs.addAll(
-            "-opt-in=kotlin.RequiresOptIn",
-        )
+        freeCompilerArgs.addAll("-opt-in=kotlin.RequiresOptIn")
         suppressWarnings.set(false)
     }
 }
 
-// Android provides org.json as a platform API (/apex/com.android.art/javalib/core-libart.jar).
-// The standalone org.json:json artefact bundles an older Apache Harmony copy of JSONArray that
-// contains an internal `myArrayList` field absent from the platform class.  Without obfuscation
-// R8 inlines against this internal field; at runtime the platform class is resolved instead,
-// producing a NoSuchFieldError.  Excluding the artefact globally ensures only the platform
-// class is ever referenced.
 configurations.configureEach {
     exclude(group = "org.json", module = "json")
 }
@@ -279,20 +249,11 @@ dependencies {
     implementation(libs.browser)
 
     implementation(libs.ucrop)
-
     implementation(libs.shimmer)
 
     implementation(libs.media3)
     implementation(libs.media3.session)
     implementation(libs.media3.okhttp)
-
-    // Google Cast - only included in GMS flavor (not available in F-Droid/FOSS builds)
-    "gmsImplementation"(libs.media3.cast)
-    "gmsImplementation"(libs.mediarouter)
-    "gmsImplementation"(libs.cast.framework)
-
-    // Wear OS companion handoff (sign-in from phone) - GMS flavor only
-    "gmsImplementation"(libs.play.services.wearable)
 
     implementation(libs.room.runtime)
     implementation(libs.kuromoji.ipadic)
@@ -310,13 +271,20 @@ dependencies {
     implementation(libs.ktor.client.encoding)
     implementation(libs.ktor.serialization.json)
 
-    // Protobuf for message serialization (lite version for Android)
     implementation(libs.protobuf.javalite)
     implementation(libs.protobuf.kotlin.lite)
 
     coreLibraryDesugaring(libs.desugaring)
 
     implementation(libs.timber)
+
+    // Wear OS Compose
+    implementation("androidx.wear.compose:compose-foundation:1.6.2")
+    implementation("androidx.wear.compose:compose-material3:1.6.2")
+    implementation("androidx.wear.compose:compose-navigation:1.6.2")
+
+    // Phone <-> watch sign-in handoff
+    implementation(libs.play.services.wearable)
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)

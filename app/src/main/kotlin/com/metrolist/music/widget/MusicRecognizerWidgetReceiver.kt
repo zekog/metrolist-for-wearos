@@ -73,7 +73,7 @@ class MusicRecognizerWidgetReceiver : AppWidgetProvider() {
         super.onReceive(context, intent)
         when (intent.action) {
             ACTION_START_RECOGNITION -> handleStartRecognition(context)
-            ACTION_UPDATE_WIDGET -> updateAllWidgets(context, AppWidgetManager.getInstance(context))
+            ACTION_UPDATE_WIDGET -> AppWidgetManager.getInstance(context)?.let { updateAllWidgets(context, it) }
             ACTION_RESET_STATE -> {
                 context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                     .edit()
@@ -85,7 +85,7 @@ class MusicRecognizerWidgetReceiver : AppWidgetProvider() {
                     .putInt(PREF_PULSE_FRAME, 0)
                     .apply()
                 File(context.cacheDir, ALBUM_ART_CACHE_FILE).delete()
-                updateAllWidgets(context, AppWidgetManager.getInstance(context))
+                AppWidgetManager.getInstance(context)?.let { updateAllWidgets(context, it) }
             }
         }
     }
