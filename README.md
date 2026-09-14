@@ -6,6 +6,8 @@
 
 ### YouTube Music client for Android with Wear OS Support
 
+### DOWNLOAD IN RELEASES TAB
+
 <br/>
 
 <a href="https://www.blacksmith.sh">
